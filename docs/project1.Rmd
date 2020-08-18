@@ -1,0 +1,79 @@
+---
+title: "California County Hospital Data"
+author: "Tyler Chia and Joanne Kim"
+output:
+  html_document:
+    theme: darkly
+---
+
+```{r, message=FALSE, warning=FALSE, echo = F}
+library(tidyverse)
+library(knitr)
+library(readxl)
+library(zoo)
+```
+
+For this project we will use multiple historic, county level datasets which is stored as updating CSV's at these URLs:
+
+Hospital Dataset:
+```{r, eval = FALSE}
+https://hifld-geoplatform.opendata.arcgis.com/datasets/6ac5e325468c4cb9b905f1728d6fbf0f_0
+```
+
+Demographic Dataset:
+```{r, eval = FALSE}
+https://www.census.gov/data/datasets/time-series/demo/popest/2010s-counties-detail.html
+```
+
+COVID-19 Dataset:
+```{r, eval = FALSE}
+https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv
+```
+
+The code for this project can be found in my repository [here](https://github.com/TylerChia/hospitals-project).
+
+*****
+
+## Purpose: Analyze various datasets in order to observe if there is any any correlation between race or poverty and the construction of hopsitals within counties of California.
+
+```{r}
+hospitals <- read_csv("~/github/hospitals-project/data/Hospitals.csv")
+```
+
+```{r}
+library(sf)
+hos_sf = st_as_sf(hospitals, coords = c("LONGITUDE", "LATITUDE"), crs = 4326)
+
+ca = USAboundaries::us_states() %>% 
+  st_transform(4326) %>% 
+  filter(stusps == "CA")
+ca_counties = USAboundaries::us_counties() %>% 
+  st_transform(4326) %>% 
+  filter(state_abbr == "CA")
+ca_hospitals <- hos_sf %>% 
+  filter(STATE == "CA") %>% 
+  filter(STATUS == 'OPEN')
+
+ggplot() +
+  geom_sf(data = ca, color = "blue") +
+  geom_sf(data= ca_counties, color = "blue") +
+  geom_sf(data = ca_hospitals, color = "red") +
+  coord_sf(datum = st_crs(ca_hospitals)) +
+  labs(title = "Location of Hospitals Throughout California",
+       x = "Longitude",
+       y = "Latitude",
+       caption = "Based on Hospitals Dataset")
+```
+
+```{r}
+num_hospitals <- hospitals %>% 
+  filter(STATE == 'CA') %>% 
+  filter(STATUS == "OPEN") %>% 
+  group_by(COUNTY) %>% 
+  summarize(Hospitals = n())
+
+knitr::kable(num_hospitals, caption = "Number of Hospitals Per California County", col.names = c("County", "Number of Hospitals"))
+```
+
+
+
